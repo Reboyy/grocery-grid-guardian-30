@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ShoppingCart, Plus, Minus, Printer, X } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { format } from "date-fns";
 
 interface Product {
   id: string;
@@ -31,6 +32,8 @@ export default function POS() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const [cashierName, setCashierName] = useState("");
+  const receiptRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -38,6 +41,16 @@ export default function POS() {
       if (!session) {
         navigate("/auth");
         return;
+      }
+      // Fetch cashier's profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name")
+        .eq("id", session.user.id)
+        .single();
+      
+      if (profile) {
+        setCashierName(profile.full_name || session.user.email || "");
       }
     };
 
@@ -94,6 +107,155 @@ export default function POS() {
         return item;
       })
     );
+  };
+
+  const completeSale = async () => {
+    if (cart.length === 0) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to complete a sale",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+
+      // Create the sale record
+      const { data: sale, error: saleError } = await supabase
+        .from("sales")
+        .insert({
+          cashier_id: user.id,
+          total_amount: total,
+          payment_method: "cash", // You can make this dynamic later
+          status: "completed"
+        })
+        .select()
+        .single();
+
+      if (saleError) throw saleError;
+
+      // Create sale items
+      const saleItems = cart.map(item => ({
+        sale_id: sale.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        subtotal: item.subtotal
+      }));
+
+      const { error: itemsError } = await supabase
+        .from("sale_items")
+        .insert(saleItems);
+
+      if (itemsError) throw itemsError;
+
+      // Update product quantities
+      for (const item of cart) {
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ stock_quantity: item.stock_quantity - item.quantity })
+          .eq("id", item.id);
+
+        if (updateError) throw updateError;
+      }
+
+      toast({
+        title: "Sale completed",
+        description: "The sale has been recorded successfully.",
+      });
+
+      // Print receipt after successful sale
+      printReceipt();
+
+      // Clear cart after successful sale
+      setCart([]);
+
+    } catch (error: any) {
+      toast({
+        title: "Error completing sale",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const printReceipt = () => {
+    if (!receiptRef.current) return;
+
+    const printWindow = window.open('', '', 'width=300,height=600');
+    if (!printWindow) return;
+
+    const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: 'Courier New', monospace;
+              width: 300px;
+              padding: 10px;
+              margin: 0;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 10px;
+            }
+            .divider {
+              border-top: 1px dashed #000;
+              margin: 10px 0;
+            }
+            .item {
+              display: flex;
+              justify-content: space-between;
+              margin: 5px 0;
+            }
+            .total {
+              font-weight: bold;
+              margin-top: 10px;
+            }
+            @media print {
+              body { width: 80mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>Store Receipt</h2>
+            <p>Date: ${format(new Date(), "PPp")}</p>
+            <p>Cashier: ${cashierName}</p>
+          </div>
+          <div class="divider"></div>
+          ${cart.map(item => `
+            <div class="item">
+              <span>${item.name} x${item.quantity}</span>
+              <span>$${item.subtotal.toFixed(2)}</span>
+            </div>
+          `).join('')}
+          <div class="divider"></div>
+          <div class="total">
+            <div class="item">
+              <span>Total:</span>
+              <span>$${total.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="header">
+            <p>Thank you for your purchase!</p>
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
   };
 
   const filteredProducts = products.filter(product =>
@@ -220,6 +382,7 @@ export default function POS() {
                     variant="outline"
                     className="w-full"
                     disabled={cart.length === 0}
+                    onClick={printReceipt}
                   >
                     <Printer className="h-4 w-4 mr-2" />
                     Print
@@ -227,6 +390,7 @@ export default function POS() {
                   <Button
                     className="w-full"
                     disabled={cart.length === 0}
+                    onClick={completeSale}
                   >
                     Complete Sale
                   </Button>
@@ -236,6 +400,9 @@ export default function POS() {
           </Card>
         </div>
       </div>
+
+      {/* Hidden receipt template for reference */}
+      <div className="hidden" ref={receiptRef} />
     </div>
   );
 }
