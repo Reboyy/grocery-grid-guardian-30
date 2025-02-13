@@ -92,7 +92,7 @@ export default function Sales() {
                 <TableCell className="font-medium">{sale.id.slice(0, 8)}</TableCell>
                 <TableCell className="capitalize">{sale.payment_method}</TableCell>
                 <TableCell className="capitalize">{sale.status}</TableCell>
-                <TableCell className="text-right">${sale.total_amount.toFixed(2)}</TableCell>
+                <TableCell className="text-right">Rp{sale.total_amount.toFixed(2)}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm">
                     View Details
