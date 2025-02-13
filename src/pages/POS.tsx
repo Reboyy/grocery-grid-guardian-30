@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -42,7 +41,6 @@ export default function POS() {
         navigate("/auth");
         return;
       }
-      // Fetch cashier's profile
       const { data: profile } = await supabase
         .from("profiles")
         .select("full_name")
@@ -62,7 +60,7 @@ export default function POS() {
       
       if (error) {
         toast({
-          title: "Error fetching products",
+          title: "Error mengambil produk",
           description: error.message,
           variant: "destructive",
         });
@@ -117,7 +115,7 @@ export default function POS() {
       if (!user) {
         toast({
           title: "Error",
-          description: "You must be logged in to complete a sale",
+          description: "Anda harus login untuk menyelesaikan penjualan",
           variant: "destructive",
         });
         return;
@@ -125,13 +123,12 @@ export default function POS() {
 
       const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
-      // Create the sale record
       const { data: sale, error: saleError } = await supabase
         .from("sales")
         .insert({
           cashier_id: user.id,
           total_amount: total,
-          payment_method: "cash", // You can make this dynamic later
+          payment_method: "cash",
           status: "completed"
         })
         .select()
@@ -139,7 +136,6 @@ export default function POS() {
 
       if (saleError) throw saleError;
 
-      // Create sale items
       const saleItems = cart.map(item => ({
         sale_id: sale.id,
         product_id: item.id,
@@ -154,7 +150,6 @@ export default function POS() {
 
       if (itemsError) throw itemsError;
 
-      // Update product quantities
       for (const item of cart) {
         const { error: updateError } = await supabase
           .from("products")
@@ -165,19 +160,16 @@ export default function POS() {
       }
 
       toast({
-        title: "Sale completed",
-        description: "The sale has been recorded successfully.",
+        title: "Penjualan selesai",
+        description: "Transaksi berhasil dicatat.",
       });
 
-      // Print receipt after successful sale
       printReceipt();
 
-      // Clear cart after successful sale
       setCart([]);
-
     } catch (error: any) {
       toast({
-        title: "Error completing sale",
+        title: "Error menyelesaikan penjualan",
         description: error.message,
         variant: "destructive",
       });
@@ -226,27 +218,27 @@ export default function POS() {
         </head>
         <body>
           <div class="header">
-            <h2>Store Receipt</h2>
-            <p>Date: ${format(new Date(), "PPp")}</p>
-            <p>Cashier: ${cashierName}</p>
+            <h2>Struk Pembayaran</h2>
+            <p>Tanggal: ${format(new Date(), "PPp")}</p>
+            <p>Kasir: ${cashierName}</p>
           </div>
           <div class="divider"></div>
           ${cart.map(item => `
             <div class="item">
               <span>${item.name} x${item.quantity}</span>
-              <span>$${item.subtotal.toFixed(2)}</span>
+              <span>Rp${item.subtotal.toFixed(2)}</span>
             </div>
           `).join('')}
           <div class="divider"></div>
           <div class="total">
             <div class="item">
               <span>Total:</span>
-              <span>$${total.toFixed(2)}</span>
+              <span>Rp${total.toFixed(2)}</span>
             </div>
           </div>
           <div class="divider"></div>
           <div class="header">
-            <p>Thank you for your purchase!</p>
+            <p>Terima kasih atas kunjungan Anda!</p>
           </div>
         </body>
       </html>
@@ -267,23 +259,22 @@ export default function POS() {
   const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return <div className="flex items-center justify-center min-h-screen">Memuat...</div>;
   }
 
   return (
     <div className="min-h-screen bg-background p-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Products Section */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center gap-4 mb-4">
             <Input
-              placeholder="Search products..."
+              placeholder="Cari produk..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-sm"
             />
             <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
+              Kembali ke Dashboard
             </Button>
           </div>
 
@@ -292,7 +283,7 @@ export default function POS() {
               variant={selectedCategory === null ? "default" : "outline"}
               onClick={() => setSelectedCategory(null)}
             >
-              All
+              Semua
             </Button>
             {categories.map((category) => (
               <Button
@@ -315,20 +306,19 @@ export default function POS() {
                 <CardHeader>
                   <CardTitle className="text-sm">{product.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
-                  <p className="text-lg font-bold">${product.price.toFixed(2)}</p>
+                  <p className="text-lg font-bold">Rp{product.price.toFixed(2)}</p>
                 </CardHeader>
               </Card>
             ))}
           </div>
         </div>
 
-        {/* Cart Section */}
         <div className="lg:col-span-1">
           <Card className="sticky top-4">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ShoppingCart className="h-5 w-5" />
-                Current Sale
+                Penjualan Saat Ini
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -337,7 +327,7 @@ export default function POS() {
                   <div key={item.id} className="flex items-center justify-between gap-2 p-2 border rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">${item.price.toFixed(2)} each</p>
+                      <p className="text-sm text-muted-foreground">Rp{item.price.toFixed(2)} per item</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
@@ -367,13 +357,13 @@ export default function POS() {
                 ))}
 
                 {cart.length === 0 && (
-                  <p className="text-center text-muted-foreground">Cart is empty</p>
+                  <p className="text-center text-muted-foreground">Keranjang kosong</p>
                 )}
 
                 <div className="pt-4 border-t">
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>Rp{total.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -385,14 +375,14 @@ export default function POS() {
                     onClick={printReceipt}
                   >
                     <Printer className="h-4 w-4 mr-2" />
-                    Print
+                    Cetak
                   </Button>
                   <Button
                     className="w-full"
                     disabled={cart.length === 0}
                     onClick={completeSale}
                   >
-                    Complete Sale
+                    Selesaikan Penjualan
                   </Button>
                 </div>
               </div>
@@ -401,7 +391,6 @@ export default function POS() {
         </div>
       </div>
 
-      {/* Hidden receipt template for reference */}
       <div className="hidden" ref={receiptRef} />
     </div>
   );
