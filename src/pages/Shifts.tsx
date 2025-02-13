@@ -6,6 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Shift {
   id: string;
@@ -24,6 +33,8 @@ export default function Shifts() {
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState(true);
+  const [startShiftOpen, setStartShiftOpen] = useState(false);
+  const [startingCash, setStartingCash] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -59,6 +70,59 @@ export default function Shifts() {
     fetchShifts();
   }, [navigate, toast]);
 
+  const startShift = async () => {
+    try {
+      const cashAmount = parseFloat(startingCash);
+      if (isNaN(cashAmount) || cashAmount < 0) {
+        toast({
+          title: "Invalid amount",
+          description: "Please enter a valid starting cash amount",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to start a shift",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { data: newShift, error } = await supabase
+        .from("shifts")
+        .insert({
+          cashier_id: user.id,
+          start_time: new Date().toISOString(),
+          starting_cash: cashAmount,
+          status: "open"
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setActiveShift(newShift);
+      setShifts(current => [newShift, ...current]);
+      setStartShiftOpen(false);
+      setStartingCash("");
+
+      toast({
+        title: "Shift started",
+        description: "Your shift has been started successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error starting shift",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -85,7 +149,7 @@ export default function Shifts() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Starting Cash</p>
-                <p className="font-medium">${activeShift.starting_cash.toFixed(2)}</p>
+                <p className="font-medium">Rp{activeShift.starting_cash.toFixed(2)}</p>
               </div>
               <div>
                 <Button className="w-full">End Shift</Button>
@@ -99,10 +163,43 @@ export default function Shifts() {
             <CardTitle>Start New Shift</CardTitle>
           </CardHeader>
           <CardContent>
-            <Button className="w-full md:w-auto">Start Shift</Button>
+            <Button 
+              className="w-full md:w-auto"
+              onClick={() => setStartShiftOpen(true)}
+            >
+              Start Shift
+            </Button>
           </CardContent>
         </Card>
       )}
+
+      <Dialog open={startShiftOpen} onOpenChange={setStartShiftOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Start New Shift</DialogTitle>
+            <DialogDescription>
+              Enter the starting cash amount for this shift.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="startingCash">Starting Cash Amount (Rp)</Label>
+              <Input
+                id="startingCash"
+                type="number"
+                step="0.01"
+                min="0"
+                value={startingCash}
+                onChange={(e) => setStartingCash(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <Button className="w-full" onClick={startShift}>
+              Start Shift
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <h2 className="text-xl font-semibold mb-4">Previous Shifts</h2>
       <div className="grid gap-4">
@@ -122,14 +219,14 @@ export default function Shifts() {
                   <div>
                     <p className="text-sm text-muted-foreground">Cash Handling</p>
                     <p className="font-medium">
-                      Start: ${shift.starting_cash.toFixed(2)}
-                      {shift.ending_cash && ` / End: $${shift.ending_cash.toFixed(2)}`}
+                      Start: Rp{shift.starting_cash.toFixed(2)}
+                      {shift.ending_cash && ` / End: Rp${shift.ending_cash.toFixed(2)}`}
                     </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Total Sales</p>
                     <p className="font-medium">
-                      {shift.total_sales ? `$${shift.total_sales.toFixed(2)}` : "N/A"}
+                      {shift.total_sales ? `Rp${shift.total_sales.toFixed(2)}` : "N/A"}
                     </p>
                   </div>
                   <div>
