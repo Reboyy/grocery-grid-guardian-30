@@ -13,6 +13,12 @@ import {
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { format } from "date-fns";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Sale {
   id: string;
@@ -22,11 +28,26 @@ interface Sale {
   status: string;
 }
 
+interface SaleItem {
+  id: string;
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+  product: {
+    name: string;
+    sku: string;
+  }
+}
+
 export default function Sales() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -59,6 +80,33 @@ export default function Sales() {
     checkAuth();
     fetchSales();
   }, [navigate, toast]);
+
+  const viewSaleDetails = async (sale: Sale) => {
+    try {
+      const { data, error } = await supabase
+        .from("sale_items")
+        .select(`
+          *,
+          product:products (
+            name,
+            sku
+          )
+        `)
+        .eq("sale_id", sale.id);
+
+      if (error) throw error;
+
+      setSelectedSale(sale);
+      setSaleItems(data);
+      setDetailsOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error fetching sale details",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
@@ -94,7 +142,11 @@ export default function Sales() {
                 <TableCell className="capitalize">{sale.status}</TableCell>
                 <TableCell className="text-right">Rp{sale.total_amount.toFixed(2)}</TableCell>
                 <TableCell className="text-right">
-                  <Button variant="outline" size="sm">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => viewSaleDetails(sale)}
+                  >
                     View Details
                   </Button>
                 </TableCell>
@@ -103,6 +155,60 @@ export default function Sales() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Sale Details</DialogTitle>
+          </DialogHeader>
+          {selectedSale && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Receipt ID</p>
+                  <p className="font-medium">{selectedSale.id}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Date</p>
+                  <p className="font-medium">
+                    {format(new Date(selectedSale.created_at), "PPp")}
+                  </p>
+                </div>
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Quantity</TableHead>
+                    <TableHead className="text-right">Unit Price</TableHead>
+                    <TableHead className="text-right">Subtotal</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {saleItems.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>{item.product.name}</TableCell>
+                      <TableCell>{item.product.sku}</TableCell>
+                      <TableCell className="text-right">{item.quantity}</TableCell>
+                      <TableCell className="text-right">Rp{item.unit_price.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">Rp{item.subtotal.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+
+              <div className="flex justify-end">
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="text-lg font-bold">Rp{selectedSale.total_amount.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
