@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, Printer, Receipt, Calendar, User } from "lucide-react";
+import { ShoppingCart, DollarSign, Printer, Receipt, Calendar, User, Settings } from "lucide-react";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -72,6 +72,13 @@ export default function Dashboard() {
       icon: <Calendar className="h-6 w-6" />,
       path: "/shifts",
       roles: ["store_owner", "shopkeeper"]
+    },
+    {
+      title: "Account Settings",
+      description: "Manage your profile and preferences",
+      icon: <Settings className="h-6 w-6" />,
+      path: "/account-settings",
+      roles: ["store_owner", "shopkeeper", "warehouse_admin"] // Available to all roles
     }
   ];
 
