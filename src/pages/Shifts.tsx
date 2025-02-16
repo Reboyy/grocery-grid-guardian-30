@@ -11,10 +11,22 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Trash2 } from "lucide-react";
 
 interface Shift {
   id: string;
@@ -40,6 +52,8 @@ export default function Shifts() {
   const [startingCash, setStartingCash] = useState("");
   const [endingCash, setEndingCash] = useState("");
   const [shiftNotes, setShiftNotes] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [shiftToDelete, setShiftToDelete] = useState<Shift | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -194,6 +208,39 @@ export default function Shifts() {
   const handleViewDetails = (shift: Shift) => {
     setSelectedShift(shift);
     setViewShiftOpen(true);
+  };
+
+  const handleDeleteShift = async (shift: Shift) => {
+    setShiftToDelete(shift);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!shiftToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from("shifts")
+        .delete()
+        .eq("id", shiftToDelete.id);
+
+      if (error) throw error;
+
+      setShifts(shifts.filter(s => s.id !== shiftToDelete.id));
+      setDeleteDialogOpen(false);
+      setShiftToDelete(null);
+
+      toast({
+        title: "Shift deleted",
+        description: "The shift has been successfully deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting shift",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
@@ -381,6 +428,22 @@ export default function Shifts() {
         </DialogContent>
       </Dialog>
 
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the shift record
+              and all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <h2 className="text-xl font-semibold mb-4">Previous Shifts</h2>
       <div className="grid gap-4">
         {shifts
@@ -388,7 +451,7 @@ export default function Shifts() {
           .map((shift) => (
             <Card key={shift.id}>
               <CardContent className="pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Shift Period</p>
                     <p className="font-medium">
@@ -416,6 +479,16 @@ export default function Shifts() {
                       onClick={() => handleViewDetails(shift)}
                     >
                       View Details
+                    </Button>
+                  </div>
+                  <div>
+                    <Button
+                      variant="destructive"
+                      className="w-full"
+                      onClick={() => handleDeleteShift(shift)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
                     </Button>
                   </div>
                 </div>
