@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,7 +31,7 @@ const languages = [
   { value: "de", label: "German" },
 ];
 
-export default function AccountSettings() {
+export default function Settings() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -142,7 +141,7 @@ export default function AccountSettings() {
     <div className="min-h-screen bg-background p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Account Settings</h1>
+          <h1 className="text-2xl font-bold">Settings</h1>
           <Button variant="outline" onClick={() => navigate("/dashboard")}>
             Back to Dashboard
           </Button>

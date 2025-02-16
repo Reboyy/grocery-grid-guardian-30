@@ -12,7 +12,7 @@ import POS from "./pages/POS";
 import Inventory from "./pages/Inventory";
 import Sales from "./pages/Sales";
 import Shifts from "./pages/Shifts";
-import AccountSettings from "./pages/AccountSettings";
+import Settings from "./pages/Settings";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -39,7 +39,7 @@ function App() {
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/sales" element={<Sales />} />
             <Route path="/shifts" element={<Shifts />} />
-            <Route path="/account-settings" element={<AccountSettings />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </TooltipProvider>
