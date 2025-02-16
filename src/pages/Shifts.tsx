@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -36,6 +35,8 @@ export default function Shifts() {
   const [loading, setLoading] = useState(true);
   const [startShiftOpen, setStartShiftOpen] = useState(false);
   const [endShiftOpen, setEndShiftOpen] = useState(false);
+  const [viewShiftOpen, setViewShiftOpen] = useState(false);
+  const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
   const [startingCash, setStartingCash] = useState("");
   const [endingCash, setEndingCash] = useState("");
   const [shiftNotes, setShiftNotes] = useState("");
@@ -190,6 +191,11 @@ export default function Shifts() {
     }
   };
 
+  const handleViewDetails = (shift: Shift) => {
+    setSelectedShift(shift);
+    setViewShiftOpen(true);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -310,6 +316,71 @@ export default function Shifts() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={viewShiftOpen} onOpenChange={setViewShiftOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Shift Details</DialogTitle>
+            <DialogDescription>
+              Detailed information about the selected shift
+            </DialogDescription>
+          </DialogHeader>
+          {selectedShift && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Start Time</Label>
+                  <p className="text-sm mt-1">
+                    {format(new Date(selectedShift.start_time), "PPp")}
+                  </p>
+                </div>
+                <div>
+                  <Label>End Time</Label>
+                  <p className="text-sm mt-1">
+                    {selectedShift.end_time
+                      ? format(new Date(selectedShift.end_time), "PPp")
+                      : "Ongoing"}
+                  </p>
+                </div>
+                <div>
+                  <Label>Starting Cash</Label>
+                  <p className="text-sm mt-1">
+                    Rp{selectedShift.starting_cash.toFixed(2)}
+                  </p>
+                </div>
+                <div>
+                  <Label>Ending Cash</Label>
+                  <p className="text-sm mt-1">
+                    {selectedShift.ending_cash
+                      ? `Rp${selectedShift.ending_cash.toFixed(2)}`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <Label>Total Sales</Label>
+                  <p className="text-sm mt-1">
+                    {selectedShift.total_sales
+                      ? `Rp${selectedShift.total_sales.toFixed(2)}`
+                      : "N/A"}
+                  </p>
+                </div>
+                <div>
+                  <Label>Status</Label>
+                  <p className="text-sm mt-1 capitalize">{selectedShift.status}</p>
+                </div>
+              </div>
+              {selectedShift.notes && (
+                <div>
+                  <Label>Notes</Label>
+                  <p className="text-sm mt-1 whitespace-pre-wrap">
+                    {selectedShift.notes}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <h2 className="text-xl font-semibold mb-4">Previous Shifts</h2>
       <div className="grid gap-4">
         {shifts
@@ -339,7 +410,13 @@ export default function Shifts() {
                     </p>
                   </div>
                   <div>
-                    <Button variant="outline" className="w-full">View Details</Button>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => handleViewDetails(shift)}
+                    >
+                      View Details
+                    </Button>
                   </div>
                 </div>
               </CardContent>
