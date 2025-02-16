@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Profile {
   id: string;
@@ -14,7 +21,16 @@ interface Profile {
   email: string | null;
   phone_number: string | null;
   address: string | null;
+  language: string;
 }
+
+const languages = [
+  { value: "en", label: "English" },
+  { value: "id", label: "Indonesian" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+];
 
 export default function AccountSettings() {
   const navigate = useNavigate();
@@ -27,6 +43,7 @@ export default function AccountSettings() {
     email: "",
     phone_number: "",
     address: "",
+    language: "en",
   });
 
   useEffect(() => {
@@ -81,6 +98,7 @@ export default function AccountSettings() {
           full_name: profile.full_name,
           phone_number: profile.phone_number,
           address: profile.address,
+          language: profile.language,
         })
         .eq("id", profile.id);
 
@@ -106,6 +124,13 @@ export default function AccountSettings() {
     setProfile(prev => ({
       ...prev,
       [name]: value,
+    }));
+  };
+
+  const handleLanguageChange = (value: string) => {
+    setProfile(prev => ({
+      ...prev,
+      language: value,
     }));
   };
 
@@ -171,6 +196,25 @@ export default function AccountSettings() {
                   value={profile.address || ""}
                   onChange={handleChange}
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="language">Language</Label>
+                <Select
+                  value={profile.language}
+                  onValueChange={handleLanguageChange}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select your language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map((lang) => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex justify-end">
