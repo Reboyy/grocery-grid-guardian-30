@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Shift {
   id: string;
@@ -34,7 +35,10 @@ export default function Shifts() {
   const [activeShift, setActiveShift] = useState<Shift | null>(null);
   const [loading, setLoading] = useState(true);
   const [startShiftOpen, setStartShiftOpen] = useState(false);
+  const [endShiftOpen, setEndShiftOpen] = useState(false);
   const [startingCash, setStartingCash] = useState("");
+  const [endingCash, setEndingCash] = useState("");
+  const [shiftNotes, setShiftNotes] = useState("");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -123,6 +127,69 @@ export default function Shifts() {
     }
   };
 
+  const endShift = async () => {
+    try {
+      if (!activeShift) return;
+
+      const endingCashAmount = parseFloat(endingCash);
+      if (isNaN(endingCashAmount) || endingCashAmount < 0) {
+        toast({
+          title: "Invalid amount",
+          description: "Please enter a valid ending cash amount",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Calculate total sales by summing all sales during the shift
+      const { data: shiftSales, error: salesError } = await supabase
+        .from("sales")
+        .select("total_amount")
+        .gte("created_at", activeShift.start_time)
+        .lte("created_at", new Date().toISOString());
+
+      if (salesError) throw salesError;
+
+      const totalSales = shiftSales.reduce((sum, sale) => sum + sale.total_amount, 0);
+
+      const { data: updatedShift, error: updateError } = await supabase
+        .from("shifts")
+        .update({
+          end_time: new Date().toISOString(),
+          ending_cash: endingCashAmount,
+          total_sales: totalSales,
+          notes: shiftNotes || null,
+          status: "closed"
+        })
+        .eq("id", activeShift.id)
+        .select()
+        .single();
+
+      if (updateError) throw updateError;
+
+      setActiveShift(null);
+      setShifts(current => 
+        current.map(shift => 
+          shift.id === activeShift.id ? updatedShift : shift
+        )
+      );
+      setEndShiftOpen(false);
+      setEndingCash("");
+      setShiftNotes("");
+
+      toast({
+        title: "Shift ended",
+        description: "Your shift has been ended successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error ending shift",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -152,7 +219,12 @@ export default function Shifts() {
                 <p className="font-medium">Rp{activeShift.starting_cash.toFixed(2)}</p>
               </div>
               <div>
-                <Button className="w-full">End Shift</Button>
+                <Button 
+                  className="w-full"
+                  onClick={() => setEndShiftOpen(true)}
+                >
+                  End Shift
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -196,6 +268,43 @@ export default function Shifts() {
             </div>
             <Button className="w-full" onClick={startShift}>
               Start Shift
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={endShiftOpen} onOpenChange={setEndShiftOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>End Shift</DialogTitle>
+            <DialogDescription>
+              Enter the ending cash amount and any notes for this shift.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="endingCash">Ending Cash Amount (Rp)</Label>
+              <Input
+                id="endingCash"
+                type="number"
+                step="0.01"
+                min="0"
+                value={endingCash}
+                onChange={(e) => setEndingCash(e.target.value)}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Shift Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={shiftNotes}
+                onChange={(e) => setShiftNotes(e.target.value)}
+                placeholder="Enter any notes about this shift..."
+              />
+            </div>
+            <Button className="w-full" onClick={endShift}>
+              End Shift
             </Button>
           </div>
         </DialogContent>
