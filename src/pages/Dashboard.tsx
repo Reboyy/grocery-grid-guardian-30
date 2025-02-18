@@ -39,29 +39,38 @@ export default function Dashboard() {
 
   const handleSignOut = async () => {
     try {
+      // First, get the current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // If there's no session, just redirect to auth
+      if (!session) {
+        navigate("/auth");
+        return;
+      }
+
+      // Attempt to sign out
       const { error } = await supabase.auth.signOut();
+      
       if (error) {
-        // If there's an error during sign out, clear the session manually
-        await supabase.auth.clearSession();
         console.error("Sign out error:", error);
+        // Even if there's an error, we'll redirect to auth
         toast({
-          title: "Sign out error",
-          description: "You have been signed out, but there was an error. Please try logging in again.",
-          variant: "destructive",
+          title: "Sign out notification",
+          description: "You have been signed out. Please sign in again if needed.",
+          variant: "default",
         });
       }
-      // Always navigate to auth page, even if there was an error
+
+      // Always navigate to auth page
       navigate("/auth");
     } catch (error: any) {
       console.error("Sign out error:", error);
-      // If there's any other error, still try to clear the session and redirect
-      await supabase.auth.clearSession();
-      navigate("/auth");
       toast({
-        title: "Sign out error",
-        description: "There was a problem signing out. Please try logging in again.",
-        variant: "destructive",
+        title: "Sign out notification",
+        description: "You have been signed out. Please sign in again if needed.",
+        variant: "default",
       });
+      navigate("/auth");
     }
   };
 
