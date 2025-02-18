@@ -35,42 +35,45 @@ export default function Dashboard() {
     };
 
     checkAuth();
+
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        navigate("/auth");
+      }
+    });
+
+    // Cleanup subscription
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [navigate]);
 
   const handleSignOut = async () => {
     try {
-      // First, get the current session
-      const { data: { session } } = await supabase.auth.getSession();
+      // We'll skip session check and just attempt to sign out
+      await supabase.auth.signOut({
+        scope: 'local'  // Only clear local session first
+      });
       
-      // If there's no session, just redirect to auth
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
+      // Then try to clear globally, but don't wait for it
+      supabase.auth.signOut({
+        scope: 'global'
+      }).catch((error) => {
+        console.error("Global sign out error:", error);
+        // We don't need to handle this error as we've already signed out locally
+      });
 
-      // Attempt to sign out
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        console.error("Sign out error:", error);
-        // Even if there's an error, we'll redirect to auth
-        toast({
-          title: "Sign out notification",
-          description: "You have been signed out. Please sign in again if needed.",
-          variant: "default",
-        });
-      }
-
-      // Always navigate to auth page
       navigate("/auth");
     } catch (error: any) {
       console.error("Sign out error:", error);
+      // Even if there's an error, redirect to auth
+      navigate("/auth");
       toast({
         title: "Sign out notification",
         description: "You have been signed out. Please sign in again if needed.",
         variant: "default",
       });
-      navigate("/auth");
     }
   };
 
