@@ -15,23 +15,39 @@ export default function Dashboard() {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error("Session error:", error);
+        navigate("/auth");
+        return;
+      }
+
       if (!session) {
         navigate("/auth");
         return;
       }
       
-      // Fetch user role
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .single();
+      try {
+        const { data: roles } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", session.user.id)
+          .single();
 
-      if (roles) {
-        setUserRole(roles.role);
+        if (roles) {
+          setUserRole(roles.role);
+        }
+      } catch (error) {
+        console.error("Role fetch error:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch user role",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     checkAuth();
@@ -47,27 +63,20 @@ export default function Dashboard() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [navigate]);
+  }, [navigate, toast]);
 
   const handleSignOut = async () => {
     try {
-      // We'll skip session check and just attempt to sign out
-      await supabase.auth.signOut({
-        scope: 'local'  // Only clear local session first
-      });
+      // First try local signout
+      await supabase.auth.signOut({ scope: 'local' });
       
-      // Then try to clear globally, but don't wait for it
-      supabase.auth.signOut({
-        scope: 'global'
-      }).catch((error) => {
-        console.error("Global sign out error:", error);
-        // We don't need to handle this error as we've already signed out locally
-      });
-
+      // Attempt global signout but don't block
+      supabase.auth.signOut({ scope: 'global' })
+        .catch(error => console.error("Global sign out error:", error));
+      
       navigate("/auth");
-    } catch (error: any) {
+    } catch (error) {
       console.error("Sign out error:", error);
-      // Even if there's an error, redirect to auth
       navigate("/auth");
       toast({
         title: "Sign out notification",
