@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -72,6 +73,9 @@ export default function Settings() {
           ...data,
           email: session.user.email,
         });
+
+        // Set the document language attribute when profile is loaded
+        document.documentElement.lang = data.language || "en";
       } catch (error: any) {
         toast({
           title: "Error loading profile",
@@ -102,6 +106,9 @@ export default function Settings() {
         .eq("id", profile.id);
 
       if (error) throw error;
+
+      // Update the document language attribute after successful save
+      document.documentElement.lang = profile.language;
 
       toast({
         title: "Success",
