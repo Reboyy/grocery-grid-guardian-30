@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, Receipt, Calendar, User, Settings } from "lucide-react";
+import { ShoppingCart, DollarSign, Receipt, Calendar, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function Dashboard() {
@@ -144,10 +144,6 @@ export default function Dashboard() {
               <Settings className="h-6 w-6" />
             </Button>
           )}
-          <Button onClick={handleSignOut} variant="outline">
-            <User className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
         </div>
       </div>
 

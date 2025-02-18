@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
+import { User } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -74,7 +74,6 @@ export default function Settings() {
           email: session.user.email,
         });
 
-        // Set the document language attribute when profile is loaded
         document.documentElement.lang = data.language || "en";
       } catch (error: any) {
         toast({
@@ -107,7 +106,6 @@ export default function Settings() {
 
       if (error) throw error;
 
-      // Update the document language attribute after successful save
       document.documentElement.lang = profile.language;
 
       toast({
@@ -140,6 +138,25 @@ export default function Settings() {
     }));
   };
 
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+      
+      supabase.auth.signOut({ scope: 'global' })
+        .catch(error => console.error("Global sign out error:", error));
+      
+      navigate("/auth");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      navigate("/auth");
+      toast({
+        title: "Sign out notification",
+        description: "You have been signed out. Please sign in again if needed.",
+        variant: "default",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -149,9 +166,15 @@ export default function Settings() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold">Settings</h1>
-          <Button variant="outline" onClick={() => navigate("/dashboard")}>
-            Back to Dashboard
-          </Button>
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={() => navigate("/dashboard")}>
+              Back to Dashboard
+            </Button>
+            <Button onClick={handleSignOut} variant="destructive">
+              <User className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Card>
