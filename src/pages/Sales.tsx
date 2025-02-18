@@ -19,6 +19,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Trash2 } from "lucide-react";
 
 interface Sale {
   id: string;
@@ -48,6 +59,8 @@ export default function Sales() {
   const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
   const [saleItems, setSaleItems] = useState<SaleItem[]>([]);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -108,6 +121,48 @@ export default function Sales() {
     }
   };
 
+  const handleDeleteSale = (sale: Sale) => {
+    setSaleToDelete(sale);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!saleToDelete) return;
+
+    try {
+      // First delete related sale items
+      const { error: itemsError } = await supabase
+        .from("sale_items")
+        .delete()
+        .eq("sale_id", saleToDelete.id);
+
+      if (itemsError) throw itemsError;
+
+      // Then delete the sale
+      const { error: saleError } = await supabase
+        .from("sales")
+        .delete()
+        .eq("id", saleToDelete.id);
+
+      if (saleError) throw saleError;
+
+      setSales(sales.filter(s => s.id !== saleToDelete.id));
+      setDeleteDialogOpen(false);
+      setSaleToDelete(null);
+
+      toast({
+        title: "Sale deleted",
+        description: "The sale and its items have been successfully deleted",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error deleting sale",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
@@ -142,13 +197,22 @@ export default function Sales() {
                 <TableCell className="capitalize">{sale.status}</TableCell>
                 <TableCell className="text-right">Rp{sale.total_amount.toFixed(2)}</TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => viewSaleDetails(sale)}
-                  >
-                    View Details
-                  </Button>
+                  <div className="flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => viewSaleDetails(sale)}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteSale(sale)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </TableCell>
               </TableRow>
             ))}
@@ -209,6 +273,22 @@ export default function Sales() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the sale record
+              and all associated items.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
