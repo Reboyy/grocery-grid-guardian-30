@@ -5,9 +5,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShoppingCart, DollarSign, Receipt, Calendar, User, Settings } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -36,8 +38,31 @@ export default function Dashboard() {
   }, [navigate]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // If there's an error during sign out, clear the session manually
+        await supabase.auth.clearSession();
+        console.error("Sign out error:", error);
+        toast({
+          title: "Sign out error",
+          description: "You have been signed out, but there was an error. Please try logging in again.",
+          variant: "destructive",
+        });
+      }
+      // Always navigate to auth page, even if there was an error
+      navigate("/auth");
+    } catch (error: any) {
+      console.error("Sign out error:", error);
+      // If there's any other error, still try to clear the session and redirect
+      await supabase.auth.clearSession();
+      navigate("/auth");
+      toast({
+        title: "Sign out error",
+        description: "There was a problem signing out. Please try logging in again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (loading) {
