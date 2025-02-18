@@ -85,10 +85,6 @@ export default function Dashboard() {
     }
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
-  }
-
   const operationalFeatures = [
     {
       title: "Point of Sale",
@@ -122,11 +118,13 @@ export default function Dashboard() {
 
   const settingsFeature = {
     title: "Settings",
-    description: "Manage your profile and preferences",
-    icon: <Settings className="h-6 w-6" />,
     path: "/settings",
     roles: ["store_owner", "shopkeeper", "warehouse_admin"]
   };
+
+  if (loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -137,20 +135,14 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-4">
           {settingsFeature.roles.includes(userRole || '') && (
-            <Card 
-              className="hover:bg-accent cursor-pointer transition-colors w-[200px]"
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
               onClick={() => navigate(settingsFeature.path)}
             >
-              <CardHeader>
-                <div className="flex items-center gap-4">
-                  {settingsFeature.icon}
-                  <div>
-                    <CardTitle>{settingsFeature.title}</CardTitle>
-                    <CardDescription>{settingsFeature.description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
+              <Settings className="h-6 w-6" />
+            </Button>
           )}
           <Button onClick={handleSignOut} variant="outline">
             <User className="h-4 w-4 mr-2" />
