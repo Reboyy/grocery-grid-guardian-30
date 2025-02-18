@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -90,7 +89,7 @@ export default function Dashboard() {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  const features = [
+  const operationalFeatures = [
     {
       title: "Point of Sale",
       description: "Process sales and transactions",
@@ -119,14 +118,15 @@ export default function Dashboard() {
       path: "/shifts",
       roles: ["store_owner", "shopkeeper"]
     },
-    {
-      title: "Settings",
-      description: "Manage your profile and preferences",
-      icon: <Settings className="h-6 w-6" />,
-      path: "/settings",
-      roles: ["store_owner", "shopkeeper", "warehouse_admin"] // Available to all roles
-    }
   ];
+
+  const settingsFeature = {
+    title: "Settings",
+    description: "Manage your profile and preferences",
+    icon: <Settings className="h-6 w-6" />,
+    path: "/settings",
+    roles: ["store_owner", "shopkeeper", "warehouse_admin"]
+  };
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -135,14 +135,32 @@ export default function Dashboard() {
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-muted-foreground">Welcome back, {userRole}</p>
         </div>
-        <Button onClick={handleSignOut} variant="outline">
-          <User className="h-4 w-4 mr-2" />
-          Sign Out
-        </Button>
+        <div className="flex items-center gap-4">
+          {settingsFeature.roles.includes(userRole || '') && (
+            <Card 
+              className="hover:bg-accent cursor-pointer transition-colors w-[200px]"
+              onClick={() => navigate(settingsFeature.path)}
+            >
+              <CardHeader>
+                <div className="flex items-center gap-4">
+                  {settingsFeature.icon}
+                  <div>
+                    <CardTitle>{settingsFeature.title}</CardTitle>
+                    <CardDescription>{settingsFeature.description}</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          )}
+          <Button onClick={handleSignOut} variant="outline">
+            <User className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {features.map((feature) => (
+        {operationalFeatures.map((feature) => (
           feature.roles.includes(userRole || '') && (
             <Card 
               key={feature.path}
