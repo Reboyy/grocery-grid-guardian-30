@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -138,10 +139,10 @@ export default function Dashboard() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10"
+              className="h-12 w-12"
               onClick={() => navigate(settingsFeature.path)}
             >
-              <Settings className="h-6 w-6" />
+              <Settings className="h-8 w-8" />
             </Button>
           )}
         </div>
