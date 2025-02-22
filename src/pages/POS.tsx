@@ -11,7 +11,7 @@ import { format } from "date-fns";
 interface Product {
   id: string;
   name: string;
-  price: number;
+  Harga: number;
   sku: string;
   stock_quantity: number;
   category: string;
@@ -83,11 +83,11 @@ export default function POS() {
       if (existingItem) {
         return currentCart.map(item =>
           item.id === product.id
-            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * item.price }
+            ? { ...item, quantity: item.quantity + 1, subtotal: (item.quantity + 1) * product.Harga }
             : item
         );
       }
-      return [...currentCart, { ...product, quantity: 1, subtotal: product.price }];
+      return [...currentCart, { ...product, quantity: 1, subtotal: product.Harga }];
     });
   };
 
@@ -100,7 +100,7 @@ export default function POS() {
       currentCart.map(item => {
         if (item.id === productId) {
           const newQuantity = Math.max(1, item.quantity + delta);
-          return { ...item, quantity: newQuantity, subtotal: newQuantity * item.price };
+          return { ...item, quantity: newQuantity, subtotal: newQuantity * item.Harga };
         }
         return item;
       })
@@ -140,7 +140,7 @@ export default function POS() {
         sale_id: sale.id,
         product_id: item.id,
         quantity: item.quantity,
-        unit_price: item.price,
+        unit_price: item.Harga,
         subtotal: item.subtotal
       }));
 
@@ -306,7 +306,7 @@ export default function POS() {
                 <CardHeader>
                   <CardTitle className="text-sm">{product.name}</CardTitle>
                   <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
-                  <p className="text-lg font-bold">Rp{product.price.toFixed(2)}</p>
+                  <p className="text-lg font-bold">Rp{product.Harga.toFixed(2)}</p>
                 </CardHeader>
               </Card>
             ))}
@@ -327,7 +327,7 @@ export default function POS() {
                   <div key={item.id} className="flex items-center justify-between gap-2 p-2 border rounded-lg">
                     <div className="flex-1">
                       <p className="font-medium">{item.name}</p>
-                      <p className="text-sm text-muted-foreground">Rp{item.price.toFixed(2)} per item</p>
+                      <p className="text-sm text-muted-foreground">Rp{item.Harga.toFixed(2)} per item</p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Button
