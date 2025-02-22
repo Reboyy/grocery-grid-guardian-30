@@ -14,9 +14,9 @@ export type Database = {
           category: string | null
           created_at: string
           description: string | null
-          Harga: number
           id: string
           name: string
+          price: number
           sku: string
           stock_quantity: number
           updated_at: string
@@ -25,9 +25,9 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
-          Harga: number
           id?: string
           name: string
+          price: number
           sku: string
           stock_quantity?: number
           updated_at?: string
@@ -36,9 +36,9 @@ export type Database = {
           category?: string | null
           created_at?: string
           description?: string | null
-          Harga?: number
           id?: string
           name?: string
+          price?: number
           sku?: string
           stock_quantity?: number
           updated_at?: string
