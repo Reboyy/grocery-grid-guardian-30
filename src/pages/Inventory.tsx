@@ -19,7 +19,7 @@ interface Product {
   sku: string;
   name: string;
   description: string | null;
-  price: number;
+  price: number;  // Changed back to price to match database schema
   stock_quantity: number;
   category: string | null;
 }
@@ -110,7 +110,7 @@ export default function Inventory() {
                 <TableCell className="font-medium">{product.sku}</TableCell>
                 <TableCell>{product.name}</TableCell>
                 <TableCell>{product.category}</TableCell>
-                <TableCell className="text-right">${product.price.toFixed(2)}</TableCell>
+                <TableCell className="text-right">Rp{product.price.toFixed(2)}</TableCell>
                 <TableCell className="text-right">{product.stock_quantity}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="outline" size="sm">
