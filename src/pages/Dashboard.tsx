@@ -3,11 +3,19 @@ import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ShoppingCart, DollarSign, Receipt, Calendar, Settings } from "lucide-react";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { ShoppingCart, DollarSign, Receipt, Calendar, Settings, Package } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import Inventory from "./Inventory";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -16,6 +24,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [activePage, setActivePage] = useState<string>("dashboard");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [products, setProducts] = useState<any[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<any[]>([]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -63,6 +74,32 @@ export default function Dashboard() {
       }
     });
 
+    // Fetch products for inventory display
+    const fetchProducts = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("products")
+          .select("*")
+          .order("name");
+        
+        if (error) {
+          toast({
+            title: "Error fetching products",
+            description: error.message,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        setProducts(data || []);
+        setFilteredProducts(data || []);
+      } catch (error) {
+        console.error("Product fetch error:", error);
+      }
+    };
+
+    fetchProducts();
+
     // Cleanup subscription
     return () => {
       subscription.unsubscribe();
@@ -76,6 +113,18 @@ export default function Dashboard() {
       setActivePage(path);
     }
   }, [location]);
+
+  // Filter products when search term changes
+  useEffect(() => {
+    if (products.length > 0) {
+      const filtered = products.filter(product => 
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+      setFilteredProducts(filtered);
+    }
+  }, [searchTerm, products]);
 
   const handleSignOut = async () => {
     try {
@@ -107,13 +156,6 @@ export default function Dashboard() {
       roles: ["store_owner", "shopkeeper"]
     },
     {
-      title: "Inventory Management",
-      description: "Manage products and stock",
-      icon: <DollarSign className="h-6 w-6" />,
-      path: "inventory",
-      roles: ["store_owner", "warehouse_admin"]
-    },
-    {
       title: "Sales History",
       description: "View and print past sales",
       icon: <Receipt className="h-6 w-6" />,
@@ -136,18 +178,20 @@ export default function Dashboard() {
   };
 
   const navigateToPage = (path: string) => {
-    setActivePage(path);
     navigate(`/${path}`);
+  };
+
+  const handleViewFullInventory = () => {
+    navigate("/inventory");
   };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   }
 
-  // If active page is specific feature, render that component
-  if (activePage === "inventory") {
-    return <Inventory />;
-  }
+  const totalProducts = products.length;
+  const lowStockProducts = products.filter(p => p.stock_quantity <= 10).length;
+  const outOfStockProducts = products.filter(p => p.stock_quantity === 0).length;
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -171,12 +215,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
         {operationalFeatures.map((feature) => (
           feature.roles.includes(userRole || '') && (
             <Card 
               key={feature.path}
-              className={`hover:bg-accent cursor-pointer transition-colors ${activePage === feature.path ? 'bg-accent' : ''}`}
+              className="hover:bg-accent cursor-pointer transition-colors"
               onClick={() => navigateToPage(feature.path)}
             >
               <CardHeader>
@@ -192,6 +236,105 @@ export default function Dashboard() {
           )
         ))}
       </div>
+
+      {/* Inventory Management Section */}
+      {(userRole === "store_owner" || userRole === "warehouse_admin") && (
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center gap-2">
+              <Package className="h-6 w-6" />
+              <h2 className="text-xl font-bold">Inventory Management</h2>
+            </div>
+            <Button onClick={handleViewFullInventory}>
+              View Full Inventory
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Total Products</CardTitle>
+                <CardDescription>All inventory items</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{totalProducts}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Low Stock</CardTitle>
+                <CardDescription>Items with stock ≤ 10</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{lowStockProducts}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle>Out of Stock</CardTitle>
+                <CardDescription>Items with stock = 0</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold">{outOfStockProducts}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mb-4">
+            <div className="relative">
+              <Input
+                placeholder="Search products..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="max-w-md"
+              />
+            </div>
+          </div>
+
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">Stock</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredProducts.length > 0 ? (
+                  filteredProducts.slice(0, 5).map((product) => (
+                    <TableRow key={product.id}>
+                      <TableCell className="font-medium">{product.sku}</TableCell>
+                      <TableCell>{product.name}</TableCell>
+                      <TableCell>{product.category || "—"}</TableCell>
+                      <TableCell className="text-right">Rp{product.price.toFixed(2)}</TableCell>
+                      <TableCell className={`text-right ${product.stock_quantity <= 10 ? "text-orange-500" : ""} ${product.stock_quantity === 0 ? "text-red-500 font-bold" : ""}`}>
+                        {product.stock_quantity}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center">
+                      No products found.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          
+          {filteredProducts.length > 5 && (
+            <div className="flex justify-center mt-4">
+              <Button variant="outline" onClick={handleViewFullInventory}>
+                View All Products
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
