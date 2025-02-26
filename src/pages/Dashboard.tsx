@@ -1,17 +1,21 @@
+
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ShoppingCart, DollarSign, Receipt, Calendar, Settings } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import Inventory from "./Inventory";
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [activePage, setActivePage] = useState<string>("dashboard");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -65,6 +69,14 @@ export default function Dashboard() {
     };
   }, [navigate, toast]);
 
+  useEffect(() => {
+    // Extract the page from location pathname
+    const path = location.pathname.split('/').pop();
+    if (path) {
+      setActivePage(path);
+    }
+  }, [location]);
+
   const handleSignOut = async () => {
     try {
       // First try local signout
@@ -91,40 +103,50 @@ export default function Dashboard() {
       title: "Point of Sale",
       description: "Process sales and transactions",
       icon: <ShoppingCart className="h-6 w-6" />,
-      path: "/pos",
+      path: "pos",
       roles: ["store_owner", "shopkeeper"]
     },
     {
       title: "Inventory Management",
       description: "Manage products and stock",
       icon: <DollarSign className="h-6 w-6" />,
-      path: "/inventory",
+      path: "inventory",
       roles: ["store_owner", "warehouse_admin"]
     },
     {
       title: "Sales History",
       description: "View and print past sales",
       icon: <Receipt className="h-6 w-6" />,
-      path: "/sales",
+      path: "sales",
       roles: ["store_owner", "shopkeeper"]
     },
     {
       title: "Shift Management",
       description: "Manage and close shifts",
       icon: <Calendar className="h-6 w-6" />,
-      path: "/shifts",
+      path: "shifts",
       roles: ["store_owner", "shopkeeper"]
     },
   ];
 
   const settingsFeature = {
     title: "Settings",
-    path: "/settings",
+    path: "settings",
     roles: ["store_owner", "shopkeeper", "warehouse_admin"]
+  };
+
+  const navigateToPage = (path: string) => {
+    setActivePage(path);
+    navigate(`/${path}`);
   };
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
+
+  // If active page is specific feature, render that component
+  if (activePage === "inventory") {
+    return <Inventory />;
   }
 
   return (
@@ -140,7 +162,7 @@ export default function Dashboard() {
               variant="ghost"
               size="icon"
               className="h-12 w-12"
-              onClick={() => navigate(settingsFeature.path)}
+              onClick={() => navigateToPage(settingsFeature.path)}
             >
               <Settings className="h-8 w-8" />
             </Button>
@@ -154,8 +176,8 @@ export default function Dashboard() {
           feature.roles.includes(userRole || '') && (
             <Card 
               key={feature.path}
-              className="hover:bg-accent cursor-pointer transition-colors"
-              onClick={() => navigate(feature.path)}
+              className={`hover:bg-accent cursor-pointer transition-colors ${activePage === feature.path ? 'bg-accent' : ''}`}
+              onClick={() => navigateToPage(feature.path)}
             >
               <CardHeader>
                 <div className="flex items-center gap-4">
