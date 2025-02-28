@@ -13,8 +13,26 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useToast } from "@/components/ui/use-toast";
-import { Package, Plus, Search, ArrowLeft, Edit, Trash2 } from "lucide-react";
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  ArrowLeft, 
+  Edit, 
+  Trash2, 
+  X 
+} from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Product {
   id: string;
@@ -26,6 +44,15 @@ interface Product {
   category: string | null;
 }
 
+interface NewProduct {
+  sku: string;
+  name: string;
+  description: string;
+  price: number | string;
+  stock_quantity: number | string;
+  category: string;
+}
+
 export default function Inventory() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -35,6 +62,18 @@ export default function Inventory() {
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<string>("all");
+  
+  // Add product state
+  const [addProductOpen, setAddProductOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState<NewProduct>({
+    sku: "",
+    name: "",
+    description: "",
+    price: "",
+    stock_quantity: "",
+    category: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -102,10 +141,110 @@ export default function Inventory() {
   });
 
   const handleAddProduct = () => {
-    toast({
-      title: "Feature coming soon",
-      description: "Add product functionality will be implemented soon.",
+    setNewProduct({
+      sku: "",
+      name: "",
+      description: "",
+      price: "",
+      stock_quantity: "",
+      category: "",
     });
+    setAddProductOpen(true);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setNewProduct({
+      ...newProduct,
+      [name]: value,
+    });
+  };
+
+  const handleSubmitProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Convert string values to numbers where needed
+      const productToSubmit = {
+        ...newProduct,
+        price: Number(newProduct.price),
+        stock_quantity: Number(newProduct.stock_quantity),
+      };
+
+      // Validate required fields
+      if (!productToSubmit.sku || !productToSubmit.name || productToSubmit.price <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if SKU already exists
+      const { data: existingSku } = await supabase
+        .from('products')
+        .select('sku')
+        .eq('sku', productToSubmit.sku)
+        .single();
+
+      if (existingSku) {
+        toast({
+          title: "Duplicate SKU",
+          description: "This SKU already exists. Please use a unique SKU.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Insert the new product
+      const { data, error } = await supabase
+        .from('products')
+        .insert([
+          {
+            sku: productToSubmit.sku,
+            name: productToSubmit.name,
+            description: productToSubmit.description || null,
+            price: productToSubmit.price,
+            stock_quantity: productToSubmit.stock_quantity || 0,
+            category: productToSubmit.category || null,
+          }
+        ])
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // Add the new product to the state
+      if (data && data.length > 0) {
+        setProducts([...products, data[0]]);
+        
+        // Update categories if needed
+        if (productToSubmit.category && !categories.includes(productToSubmit.category)) {
+          setCategories([...categories, productToSubmit.category]);
+        }
+      }
+
+      toast({
+        title: "Product Added",
+        description: `${productToSubmit.name} has been added to inventory.`,
+      });
+
+      // Close the dialog
+      setAddProductOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error Adding Product",
+        description: error.message || "An error occurred while adding the product.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleEditProduct = (id: string) => {
@@ -289,6 +428,122 @@ export default function Inventory() {
           </TableBody>
         </Table>
       </div>
+
+      {/* Add Product Dialog */}
+      <Dialog open={addProductOpen} onOpenChange={setAddProductOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Product</DialogTitle>
+            <DialogDescription>
+              Fill in the details to add a new product to your inventory.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitProduct}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="sku" className="text-right">
+                    SKU <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="sku"
+                    name="sku"
+                    placeholder="Product SKU"
+                    value={newProduct.sku}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-right">
+                    Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="name"
+                    name="name" 
+                    placeholder="Product Name"
+                    value={newProduct.name}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">
+                  Description
+                </Label>
+                <Textarea
+                  id="description"
+                  name="description"
+                  placeholder="Product description"
+                  value={newProduct.description}
+                  onChange={handleInputChange}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="price" className="text-right">
+                    Price (Rp) <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="price"
+                    name="price"
+                    type="number"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    value={newProduct.price}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stock_quantity" className="text-right">
+                    Stock Quantity
+                  </Label>
+                  <Input
+                    id="stock_quantity"
+                    name="stock_quantity"
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    value={newProduct.stock_quantity}
+                    onChange={handleInputChange}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="category">
+                  Category
+                </Label>
+                <Input
+                  id="category"
+                  name="category"
+                  placeholder="Product Category"
+                  value={newProduct.category}
+                  onChange={handleInputChange}
+                  list="categories"
+                />
+                <datalist id="categories">
+                  {categories.map((category, index) => (
+                    <option key={index} value={category} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setAddProductOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Saving..." : "Save Product"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
