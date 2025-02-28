@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -61,6 +62,7 @@ export default function Sales() {
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [saleToDelete, setSaleToDelete] = useState<Sale | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -128,6 +130,7 @@ export default function Sales() {
 
   const confirmDelete = async () => {
     if (!saleToDelete) return;
+    setIsDeleting(true);
 
     try {
       // First delete related sale items
@@ -146,7 +149,9 @@ export default function Sales() {
 
       if (saleError) throw saleError;
 
-      setSales(sales.filter(s => s.id !== saleToDelete.id));
+      // Update the local state to remove the deleted sale
+      setSales(prevSales => prevSales.filter(s => s.id !== saleToDelete.id));
+      
       setDeleteDialogOpen(false);
       setSaleToDelete(null);
 
@@ -160,6 +165,8 @@ export default function Sales() {
         description: error.message,
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -189,33 +196,41 @@ export default function Sales() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sales.map((sale) => (
-              <TableRow key={sale.id}>
-                <TableCell>{format(new Date(sale.created_at), "PPp")}</TableCell>
-                <TableCell className="font-medium">{sale.id.slice(0, 8)}</TableCell>
-                <TableCell className="capitalize">{sale.payment_method}</TableCell>
-                <TableCell className="capitalize">{sale.status}</TableCell>
-                <TableCell className="text-right">Rp{sale.total_amount.toFixed(2)}</TableCell>
-                <TableCell className="text-right">
-                  <div className="flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => viewSaleDetails(sale)}
-                    >
-                      View Details
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteSale(sale)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+            {sales.length > 0 ? (
+              sales.map((sale) => (
+                <TableRow key={sale.id}>
+                  <TableCell>{format(new Date(sale.created_at), "PPp")}</TableCell>
+                  <TableCell className="font-medium">{sale.id.slice(0, 8)}</TableCell>
+                  <TableCell className="capitalize">{sale.payment_method}</TableCell>
+                  <TableCell className="capitalize">{sale.status}</TableCell>
+                  <TableCell className="text-right">Rp{sale.total_amount.toFixed(2)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => viewSaleDetails(sale)}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDeleteSale(sale)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-24 text-center">
+                  No sales records found.
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </div>
@@ -224,6 +239,9 @@ export default function Sales() {
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Sale Details</DialogTitle>
+            <DialogDescription>
+              Review the details of this sale
+            </DialogDescription>
           </DialogHeader>
           {selectedSale && (
             <div className="space-y-4">
@@ -284,8 +302,13 @@ export default function Sales() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
