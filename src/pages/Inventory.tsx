@@ -74,6 +74,18 @@ export default function Inventory() {
     category: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Edit product state
+  const [editProductOpen, setEditProductOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<NewProduct & { id: string }>({
+    id: "",
+    sku: "",
+    name: "",
+    description: "",
+    price: "",
+    stock_quantity: "",
+    category: "",
+  });
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -152,12 +164,36 @@ export default function Inventory() {
     setAddProductOpen(true);
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleEditProduct = (id: string) => {
+    const productToEdit = products.find(p => p.id === id);
+    if (productToEdit) {
+      setEditingProduct({
+        id: productToEdit.id,
+        sku: productToEdit.sku,
+        name: productToEdit.name,
+        description: productToEdit.description || "",
+        price: productToEdit.price.toString(),
+        stock_quantity: productToEdit.stock_quantity.toString(),
+        category: productToEdit.category || "",
+      });
+      setEditProductOpen(true);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>, isEdit = false) => {
     const { name, value } = e.target;
-    setNewProduct({
-      ...newProduct,
-      [name]: value,
-    });
+    
+    if (isEdit) {
+      setEditingProduct({
+        ...editingProduct,
+        [name]: value,
+      });
+    } else {
+      setNewProduct({
+        ...newProduct,
+        [name]: value,
+      });
+    }
   };
 
   const handleSubmitProduct = async (e: React.FormEvent) => {
@@ -247,11 +283,91 @@ export default function Inventory() {
     }
   };
 
-  const handleEditProduct = (id: string) => {
-    toast({
-      title: "Feature coming soon",
-      description: `Edit product ${id} functionality will be implemented soon.`,
-    });
+  const handleSubmitEditProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      // Convert string values to numbers where needed
+      const productToSubmit = {
+        ...editingProduct,
+        price: Number(editingProduct.price),
+        stock_quantity: Number(editingProduct.stock_quantity),
+      };
+
+      // Validate required fields
+      if (!productToSubmit.sku || !productToSubmit.name || productToSubmit.price <= 0) {
+        toast({
+          title: "Validation Error",
+          description: "Please fill in all required fields correctly.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Check if SKU already exists (but not for this product)
+      const { data: existingSku } = await supabase
+        .from('products')
+        .select('sku, id')
+        .eq('sku', productToSubmit.sku)
+        .neq('id', productToSubmit.id)
+        .single();
+
+      if (existingSku) {
+        toast({
+          title: "Duplicate SKU",
+          description: "This SKU already exists for another product. Please use a unique SKU.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Update the product
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          sku: productToSubmit.sku,
+          name: productToSubmit.name,
+          description: productToSubmit.description || null,
+          price: productToSubmit.price,
+          stock_quantity: productToSubmit.stock_quantity || 0,
+          category: productToSubmit.category || null,
+        })
+        .eq('id', productToSubmit.id)
+        .select();
+
+      if (error) {
+        throw error;
+      }
+
+      // Update the product in the state
+      if (data && data.length > 0) {
+        setProducts(products.map(p => p.id === productToSubmit.id ? data[0] : p));
+        
+        // Update categories if needed
+        if (productToSubmit.category && !categories.includes(productToSubmit.category)) {
+          setCategories([...categories, productToSubmit.category]);
+        }
+      }
+
+      toast({
+        title: "Product Updated",
+        description: `${productToSubmit.name} has been updated.`,
+      });
+
+      // Close the dialog
+      setEditProductOpen(false);
+    } catch (error: any) {
+      toast({
+        title: "Error Updating Product",
+        description: error.message || "An error occurred while updating the product.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteProduct = (id: string) => {
@@ -539,6 +655,122 @@ export default function Inventory() {
               </Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Saving..." : "Save Product"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={editProductOpen} onOpenChange={setEditProductOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Product</DialogTitle>
+            <DialogDescription>
+              Update the details of your product.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleSubmitEditProduct}>
+            <div className="grid gap-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-sku" className="text-right">
+                    SKU <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit-sku"
+                    name="sku"
+                    placeholder="Product SKU"
+                    value={editingProduct.sku}
+                    onChange={(e) => handleInputChange(e, true)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name" className="text-right">
+                    Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    name="name" 
+                    placeholder="Product Name"
+                    value={editingProduct.name}
+                    onChange={(e) => handleInputChange(e, true)}
+                    required
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">
+                  Description
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  placeholder="Product description"
+                  value={editingProduct.description}
+                  onChange={(e) => handleInputChange(e, true)}
+                  rows={3}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price" className="text-right">
+                    Price (Rp) <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit-price"
+                    name="price"
+                    type="number"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    value={editingProduct.price}
+                    onChange={(e) => handleInputChange(e, true)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-stock_quantity" className="text-right">
+                    Stock Quantity
+                  </Label>
+                  <Input
+                    id="edit-stock_quantity"
+                    name="stock_quantity"
+                    type="number"
+                    placeholder="0"
+                    min="0"
+                    step="1"
+                    value={editingProduct.stock_quantity}
+                    onChange={(e) => handleInputChange(e, true)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">
+                  Category
+                </Label>
+                <Input
+                  id="edit-category"
+                  name="category"
+                  placeholder="Product Category"
+                  value={editingProduct.category}
+                  onChange={(e) => handleInputChange(e, true)}
+                  list="edit-categories"
+                />
+                <datalist id="edit-categories">
+                  {categories.map((category, index) => (
+                    <option key={index} value={category} />
+                  ))}
+                </datalist>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" type="button" onClick={() => setEditProductOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Updating..." : "Update Product"}
               </Button>
             </DialogFooter>
           </form>
