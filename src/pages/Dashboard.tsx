@@ -169,6 +169,13 @@ export default function Dashboard() {
       path: "shifts",
       roles: ["store_owner", "shopkeeper"]
     },
+    {
+      title: "Inventory Management",
+      description: "Manage stock and products",
+      icon: <Package className="h-6 w-6" />,
+      path: "inventory",
+      roles: ["store_owner", "warehouse_admin"]
+    }
   ];
 
   const settingsFeature = {
@@ -237,17 +244,11 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Inventory Management Section */}
+      {/* Inventory Statistics Section - only shown if they also have inventory access */}
       {(userRole === "store_owner" || userRole === "warehouse_admin") && (
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">
-            <div className="flex items-center gap-2">
-              <Package className="h-6 w-6" />
-              <h2 className="text-xl font-bold">Inventory Management</h2>
-            </div>
-            <Button onClick={handleViewFullInventory}>
-              View Full Inventory
-            </Button>
+            <h2 className="text-xl font-bold">Inventory Statistics</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
