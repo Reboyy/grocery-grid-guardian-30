@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -174,7 +173,7 @@ export default function Dashboard() {
       description: "Manage stock and products",
       icon: <Package className="h-6 w-6" />,
       path: "inventory",
-      roles: ["store_owner", "warehouse_admin"]
+      roles: ["store_owner", "warehouse_admin", "shopkeeper"]
     }
   ];
 
@@ -244,8 +243,8 @@ export default function Dashboard() {
         ))}
       </div>
 
-      {/* Inventory Statistics Section - only shown if they also have inventory access */}
-      {(userRole === "store_owner" || userRole === "warehouse_admin") && (
+      {/* Inventory Statistics Section - also shown to shopkeepers now */}
+      {(userRole === "store_owner" || userRole === "warehouse_admin" || userRole === "shopkeeper") && (
         <div className="mt-8">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Inventory Statistics</h2>
