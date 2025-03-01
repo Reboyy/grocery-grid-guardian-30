@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,7 +169,7 @@ export default function Settings() {
           <h1 className="text-2xl font-bold">Settings</h1>
           <div className="flex gap-4">
             <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Back to Dashboard
+              Back
             </Button>
             <Button onClick={handleSignOut} variant="destructive">
               <User className="h-4 w-4 mr-2" />
