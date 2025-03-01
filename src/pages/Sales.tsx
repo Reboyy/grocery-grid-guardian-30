@@ -138,19 +138,37 @@ export default function Sales() {
     setIsDeleting(true);
 
     try {
-      console.log("Deleting sale items for sale ID:", saleToDelete.id);
-      // First delete related sale items
-      const { error: itemsError } = await supabase
+      console.log("Starting delete operation for sale ID:", saleToDelete.id);
+      
+      // First check if there are any sale items
+      const { data: itemsData, error: checkError } = await supabase
         .from("sale_items")
-        .delete()
+        .select("id")
         .eq("sale_id", saleToDelete.id);
+        
+      if (checkError) {
+        console.error("Error checking sale items:", checkError);
+        throw checkError;
+      }
+      
+      console.log(`Found ${itemsData?.length || 0} sale items to delete`);
+      
+      // Only attempt to delete items if there are any
+      if (itemsData && itemsData.length > 0) {
+        console.log("Deleting sale items for sale ID:", saleToDelete.id);
+        const { error: itemsError } = await supabase
+          .from("sale_items")
+          .delete()
+          .eq("sale_id", saleToDelete.id);
 
-      if (itemsError) {
-        console.error("Error deleting sale items:", itemsError);
-        throw itemsError;
+        if (itemsError) {
+          console.error("Error deleting sale items:", itemsError);
+          throw itemsError;
+        }
+        console.log("Sale items successfully deleted");
       }
 
-      console.log("Sale items deleted, now deleting sale with ID:", saleToDelete.id);
+      console.log("Now deleting sale with ID:", saleToDelete.id);
       // Then delete the sale
       const { error: saleError } = await supabase
         .from("sales")
@@ -162,10 +180,12 @@ export default function Sales() {
         throw saleError;
       }
 
-      console.log("Sale successfully deleted, updating UI state");
+      console.log("Sale successfully deleted from database");
+      
       // Update the local state to remove the deleted sale
       setSales(prevSales => prevSales.filter(s => s.id !== saleToDelete.id));
       
+      // Close the dialog and reset state AFTER successful deletion
       setDeleteDialogOpen(false);
       setSaleToDelete(null);
 
