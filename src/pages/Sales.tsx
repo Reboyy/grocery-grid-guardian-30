@@ -138,22 +138,31 @@ export default function Sales() {
     setIsDeleting(true);
 
     try {
+      console.log("Deleting sale items for sale ID:", saleToDelete.id);
       // First delete related sale items
       const { error: itemsError } = await supabase
         .from("sale_items")
         .delete()
         .eq("sale_id", saleToDelete.id);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error("Error deleting sale items:", itemsError);
+        throw itemsError;
+      }
 
+      console.log("Sale items deleted, now deleting sale with ID:", saleToDelete.id);
       // Then delete the sale
       const { error: saleError } = await supabase
         .from("sales")
         .delete()
         .eq("id", saleToDelete.id);
 
-      if (saleError) throw saleError;
+      if (saleError) {
+        console.error("Error deleting sale:", saleError);
+        throw saleError;
+      }
 
+      console.log("Sale successfully deleted, updating UI state");
       // Update the local state to remove the deleted sale
       setSales(prevSales => prevSales.filter(s => s.id !== saleToDelete.id));
       
@@ -165,6 +174,7 @@ export default function Sales() {
         description: "The sale has been permanently deleted",
       });
     } catch (error: any) {
+      console.error("Delete operation failed:", error);
       toast({
         title: "Error deleting sale",
         description: error.message,
@@ -318,7 +328,11 @@ export default function Sales() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction 
-              onClick={confirmDelete} 
+              onClick={(e) => {
+                // Prevent default to avoid closing the dialog automatically
+                e.preventDefault();
+                confirmDelete();
+              }} 
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
