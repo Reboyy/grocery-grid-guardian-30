@@ -74,22 +74,27 @@ export default function Sales() {
     };
 
     const fetchSales = async () => {
-      const { data, error } = await supabase
-        .from("sales")
-        .select("*")
-        .order("created_at", { ascending: false });
-      
-      if (error) {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("sales")
+          .select("*")
+          .order("created_at", { ascending: false });
+        
+        if (error) {
+          throw error;
+        }
+
+        setSales(data || []);
+      } catch (error: any) {
         toast({
           title: "Error fetching sales",
           description: error.message,
           variant: "destructive",
         });
-        return;
+      } finally {
+        setLoading(false);
       }
-
-      setSales(data);
-      setLoading(false);
     };
 
     checkAuth();
@@ -112,7 +117,7 @@ export default function Sales() {
       if (error) throw error;
 
       setSelectedSale(sale);
-      setSaleItems(data);
+      setSaleItems(data || []);
       setDetailsOpen(true);
     } catch (error: any) {
       toast({
@@ -157,7 +162,7 @@ export default function Sales() {
 
       toast({
         title: "Sale deleted",
-        description: "The sale and its items have been successfully deleted",
+        description: "The sale has been permanently deleted",
       });
     } catch (error: any) {
       toast({
@@ -179,7 +184,7 @@ export default function Sales() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Sales History</h1>
         <Button variant="outline" onClick={() => navigate("/dashboard")}>
-          Back to Dashboard
+          Back
         </Button>
       </div>
 
@@ -217,6 +222,7 @@ export default function Sales() {
                         variant="destructive"
                         size="sm"
                         onClick={() => handleDeleteSale(sale)}
+                        disabled={isDeleting && saleToDelete?.id === sale.id}
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -269,15 +275,23 @@ export default function Sales() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {saleItems.map((item) => (
-                    <TableRow key={item.id}>
-                      <TableCell>{item.product.name}</TableCell>
-                      <TableCell>{item.product.sku}</TableCell>
-                      <TableCell className="text-right">{item.quantity}</TableCell>
-                      <TableCell className="text-right">Rp{item.unit_price.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">Rp{item.subtotal.toFixed(2)}</TableCell>
+                  {saleItems.length > 0 ? (
+                    saleItems.map((item) => (
+                      <TableRow key={item.id}>
+                        <TableCell>{item.product.name}</TableCell>
+                        <TableCell>{item.product.sku}</TableCell>
+                        <TableCell className="text-right">{item.quantity}</TableCell>
+                        <TableCell className="text-right">Rp{item.unit_price.toFixed(2)}</TableCell>
+                        <TableCell className="text-right">Rp{item.subtotal.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-24 text-center">
+                        No items found for this sale.
+                      </TableCell>
                     </TableRow>
-                  ))}
+                  )}
                 </TableBody>
               </Table>
 
@@ -298,7 +312,7 @@ export default function Sales() {
             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone. This will permanently delete the sale record
-              and all associated items.
+              and all associated items from the database.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
