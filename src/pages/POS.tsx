@@ -274,7 +274,7 @@ export default function POS() {
               className="max-w-sm"
             />
             <Button variant="outline" onClick={() => navigate("/dashboard")}>
-              Kembali ke Dashboard
+              Back
             </Button>
           </div>
 
