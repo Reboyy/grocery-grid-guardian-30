@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -252,7 +253,7 @@ export default function Shifts() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Shift Management</h1>
         <Button variant="outline" onClick={() => navigate("/dashboard")}>
-          Back to Dashboard
+          Back
         </Button>
       </div>
 
