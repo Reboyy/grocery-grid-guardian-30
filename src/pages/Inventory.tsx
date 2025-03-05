@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -63,7 +62,6 @@ export default function Inventory() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [stockFilter, setStockFilter] = useState<string>("all");
   
-  // Add product state
   const [addProductOpen, setAddProductOpen] = useState(false);
   const [newProduct, setNewProduct] = useState<NewProduct>({
     sku: "",
@@ -75,7 +73,6 @@ export default function Inventory() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Edit product state
   const [editProductOpen, setEditProductOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<NewProduct & { id: string }>({
     id: "",
@@ -113,7 +110,6 @@ export default function Inventory() {
 
       setProducts(data);
       
-      // Extract unique categories
       const uniqueCategories = [...new Set(data.map(product => product.category).filter(Boolean))];
       setCategories(uniqueCategories as string[]);
       
@@ -133,15 +129,12 @@ export default function Inventory() {
   };
 
   const filteredProducts = products.filter(product => {
-    // Search filter
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       product.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (product.category && product.category.toLowerCase().includes(searchTerm.toLowerCase()));
     
-    // Category filter
     const matchesCategory = selectedCategory === null || product.category === selectedCategory;
     
-    // Stock filter
     let matchesStock = true;
     if (stockFilter === "low") {
       matchesStock = product.stock_quantity <= 10;
@@ -201,14 +194,12 @@ export default function Inventory() {
     setIsSubmitting(true);
     
     try {
-      // Convert string values to numbers where needed
       const productToSubmit = {
         ...newProduct,
         price: Number(newProduct.price),
         stock_quantity: Number(newProduct.stock_quantity),
       };
 
-      // Validate required fields
       if (!productToSubmit.sku || !productToSubmit.name || productToSubmit.price <= 0) {
         toast({
           title: "Validation Error",
@@ -219,7 +210,6 @@ export default function Inventory() {
         return;
       }
 
-      // Check if SKU already exists
       const { data: existingSku } = await supabase
         .from('products')
         .select('sku')
@@ -236,7 +226,6 @@ export default function Inventory() {
         return;
       }
 
-      // Insert the new product
       const { data, error } = await supabase
         .from('products')
         .insert([
@@ -255,11 +244,9 @@ export default function Inventory() {
         throw error;
       }
 
-      // Add the new product to the state
       if (data && data.length > 0) {
         setProducts([...products, data[0]]);
         
-        // Update categories if needed
         if (productToSubmit.category && !categories.includes(productToSubmit.category)) {
           setCategories([...categories, productToSubmit.category]);
         }
@@ -270,7 +257,6 @@ export default function Inventory() {
         description: `${productToSubmit.name} has been added to inventory.`,
       });
 
-      // Close the dialog
       setAddProductOpen(false);
     } catch (error: any) {
       toast({
@@ -288,14 +274,12 @@ export default function Inventory() {
     setIsSubmitting(true);
     
     try {
-      // Convert string values to numbers where needed
       const productToSubmit = {
         ...editingProduct,
         price: Number(editingProduct.price),
         stock_quantity: Number(editingProduct.stock_quantity),
       };
 
-      // Validate required fields
       if (!productToSubmit.sku || !productToSubmit.name || productToSubmit.price <= 0) {
         toast({
           title: "Validation Error",
@@ -306,7 +290,6 @@ export default function Inventory() {
         return;
       }
 
-      // Check if SKU already exists (but not for this product)
       const { data: existingSku } = await supabase
         .from('products')
         .select('sku, id')
@@ -324,7 +307,6 @@ export default function Inventory() {
         return;
       }
 
-      // Update the product
       const { data, error } = await supabase
         .from('products')
         .update({
@@ -342,11 +324,9 @@ export default function Inventory() {
         throw error;
       }
 
-      // Update the product in the state
       if (data && data.length > 0) {
         setProducts(products.map(p => p.id === productToSubmit.id ? data[0] : p));
         
-        // Update categories if needed
         if (productToSubmit.category && !categories.includes(productToSubmit.category)) {
           setCategories([...categories, productToSubmit.category]);
         }
@@ -357,7 +337,6 @@ export default function Inventory() {
         description: `${productToSubmit.name} has been updated.`,
       });
 
-      // Close the dialog
       setEditProductOpen(false);
     } catch (error: any) {
       toast({
@@ -477,7 +456,7 @@ export default function Inventory() {
           size="sm"
           onClick={() => handleCategoryFilter(null)}
         >
-          All Categories
+          Semua
         </Button>
         {categories.map((category) => (
           <Button
@@ -545,7 +524,6 @@ export default function Inventory() {
         </Table>
       </div>
 
-      {/* Add Product Dialog */}
       <Dialog open={addProductOpen} onOpenChange={setAddProductOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
@@ -661,7 +639,6 @@ export default function Inventory() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Product Dialog */}
       <Dialog open={editProductOpen} onOpenChange={setEditProductOpen}>
         <DialogContent className="sm:max-w-[600px]">
           <DialogHeader>
